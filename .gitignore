@@ -8,3 +8,4 @@ build/
 dist/
 .env
 .ipynb_checkpoints/
+version_control.txt

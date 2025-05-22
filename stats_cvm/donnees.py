@@ -5,10 +5,53 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm, t, chi2
 from .variable import Variable, form
 from .regression import Regression
+from typing import Literal, TypedDict, Optional, Self
 
+class InfoPop(TypedDict):
+    taille_population: Optional[int]  # int or None
+    est_population: bool
+    unites_stat_complet: str
+    unites_stat: str
+    source: str
+    lieu: str
+    date: str
+
+class InfoVar(TypedDict):
+    type_var: Literal['n', 'o', 'd', 'c', '']
+    nom_complet: str
+    nom_court: str
+    legende: list
+    unite_mesure: str
 
 class Donnees:
-    def __init__(self, df, info_pop=None):
+    """
+    Classe Donnees pour la gestion des données statistiques.
+
+    Attributs:
+        - data (pd.DataFrame): Le DataFrame contenant les données.
+        - info_pop (InfoPop): Informations sur la population
+            - taille_population (int): Taille de la population.
+            - est_population (bool): Indique si c'est une population.
+            - unites_stat_complet (str): Unités statistiques complètes.
+            - unites_stat (str): Unités statistiques.
+            - source (str): Source des données.
+            - lieu (str): Lieu des données.
+        - variables (list[Variable]): Liste d'objets Variable représentant les variables dans le DataFrame.
+    """
+    def __init__(self, df: pd.DataFrame, info_pop: InfoPop | None = None) -> None:
+        """
+        Initialise la classe Donnees avec un DataFrame et des informations sur la population.
+        Args:
+            df (pd.DataFrame): Le DataFrame contenant les données.
+            info_pop (InfoPop, optional): Informations sur la population. Si None, des valeurs par défaut sont utilisées.
+                taille_population (int): Taille de la population.
+                est_population (bool): Indique si c'est une population.
+                unites_stat_complet (str): Unités statistiques complètes.
+                unites_stat (str): Unités statistiques.
+                source (str): Source des données.
+                lieu (str): Lieu des données.
+                date (str): Date des données.
+        """
         self.data = df.copy()
         if info_pop is not None:
             self.info_pop = info_pop
@@ -24,17 +67,29 @@ class Donnees:
             }
         
         self.taille_population, self.est_population, self.unites_stat_complet, self.unites_stat, self.source, self.lieu, self.date = self.info_pop.values()
-        self.variables = [Variable(df, colonne=nom).definir(info_pop=self.info_pop) for nom in range(len(df.columns))]
+        self.variables: list[Variable] = [Variable(df, colonne=nom).definir(info_pop=self.info_pop) for nom in range(len(df.columns))]
 
 
-    def set_types_var(self, *args):
+    def set_types_var(self, *args: Literal['n', 'o', 'd', 'c']) -> None:
+        """
+        Définit les types de variables pour chaque variable dans le DataFrame.
+        Args:
+            *args (Literal['n', 'o', 'd', 'c']): Types de variables à définir.
+        """
         if len(args) != len(self.variables):
             print("Attention, le nombre de types et le nombre de variables ne sont pas les mêmes.")
         for i, var in enumerate(self.variables):
             var.definir(type_var=args[i])
 
 
-    def echantillon(self, taille):
+    def echantillon(self, taille: int) -> "Donnees":
+        """
+        Crée un échantillon aléatoire de la taille spécifiée à partir des données.
+        Args:
+            taille (int): Taille de l'échantillon à créer.
+        Returns:
+            Donnees: Un nouvel objet Donnees contenant l'échantillon aléatoire.
+        """
         infos_vars = [variable.infos()[1] for variable in self.variables]
         sample = Donnees(self.data.sample(taille), info_pop=self.info_pop)
         for variable, info in zip(sample.variables, infos_vars):
@@ -42,7 +97,14 @@ class Donnees:
         return sample
 
 
-    def id_var(self, var):
+    def id_var(self, var: str | int | Variable) -> Variable:
+        """
+        Renvoie l'objet Variable correspondant à l'identifiant spécifié.
+        Args:
+            var (str | int | Variable): L'identifiant de la variable (nom, index ou objet Variable).
+        Returns:
+            Variable: L'objet Variable correspondant à l'identifiant spécifié.
+        """
         if not isinstance(var, Variable):
             if type(var) == int:
                 index = var
@@ -246,7 +308,7 @@ class Donnees:
             decision = 'TEST NON VALIDE --> fréquence(s) théorique(s) inférieure(s) à 5'
             tableau_ft = True
         else:
-            decision = 'Les variables sont indépendantes' if khi_deux <= valeur_critique else 'Les variables NE sont PAS indépendantes'
+            decision = 'On ne peut pas conclure que les variables sont dépendantes.' if khi_deux <= valeur_critique else 'On peut conclure que les variables NE sont PAS indépendantes.'
 
         output = [
             f'La valeur critique est: {valeur_critique}',

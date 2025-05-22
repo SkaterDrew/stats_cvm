@@ -5,9 +5,86 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm, t
 import warnings
 from .formattage import form
+from typing import Literal, TypedDict, Optional, Self
+
+class InfoPop(TypedDict):
+    taille_population: Optional[int]  # int or None
+    est_population: bool
+    unites_stat_complet: str
+    unites_stat: str
+    source: str
+    lieu: str
+    date: str
+
+class InfoVar(TypedDict):
+    type_var: Literal['n', 'o', 'd', 'c', '']
+    nom_complet: str
+    nom_court: str
+    legende: list
+    unite_mesure: str
 
 class Variable:
-    def __init__(self, df, colonne=0, type_var='n'):
+    """
+    Classe représentant une variable statistique.
+    Elle permet de stocker des données, de calculer des statistiques descriptives,
+    de créer des classes et de générer des tableaux et graphiques.
+
+    Attributs:
+        data (pd.Series): Données de la variable.
+        nom_col (str): Nom de la colonne si les données proviennent d'un DataFrame.
+        type_var (str): Type de variable
+            'n': Nominale
+            'o': Ordinale
+            'd': Discrète
+            'c': Continue
+        nom_complet (str): Nom complet de la variable.
+        nom_court (str): Nom court de la variable.
+        legende (list[str]): Légende associée à la variable Qualitative.
+        unite_mesure (str): Unité de mesure de la variable.
+        taille_population (int): Taille de la population, si connu, sinon None.
+        est_population (bool): Indique si la variable est une population.
+        unites_stat_complet (str): Nom complet des unités statistiques.
+        unites_stat (str): Nom abrégées des unités statistiques.
+        source (str): Source des données.
+        lieu (str): Lieu des données.
+        date (str): Date des données.
+        qualitative (bool): Indique si la variable est qualitative.
+        quantitative (bool): Indique si la variable est quantitative.
+        est_continue (bool): Indique si la variable est continue (inclus discrète avec beaucoup de valeurs).
+        moyenne (float): Moyenne de la variable.
+        ecart_type (float): Ecart-type de la variable.
+        variance (float): Variance de la variable.
+        coeff_var (float): Coefficient de variation de la variable.
+        mediane (float): Médiane de la variable.
+        mode (list): Mode(s) de la variable.
+        ecart_interquartile (float): Ecart interquartile de la variable.
+        min (float): Valeur minimale de la variable.
+        max (float): Valeur maximale de la variable.
+        etendue (float): Etendue de la variable.
+        n (int): Nombre d'observations.
+        unique (list): Valeurs uniques de la variable.
+        modalites (list): Modalités de la variable.
+        frequences (np.ndarray): Fréquences de la variable.
+        pourcentages (np.ndarray): Pourcentages de la variable.
+        pourcentges_cumul (np.ndarray): Pourcentages cumulés de la variable.
+        bornes (np.ndarray): Bornes des classes de la variable.
+    """
+    def __init__(self,
+        df: pd.DataFrame | pd.Series | list | dict,
+        colonne: int | str = 0,
+        type_var: Literal['n', 'o', 'd', 'c'] = 'n'
+    ) -> None:
+        """
+        Initialise la variable avec un DataFrame, une Series, une liste ou un dictionnaire.
+
+        Args:
+            df (pd.DataFrame | pd.Series | list | dict): Données à utiliser pour initialiser la variable.
+            colonne (int | str, optional): Nom ou index de la colonne à utiliser si df est un DataFrame. Par défaut, 0.
+            type_var (str, optional): Type de variable ('n', 'o', 'd', 'c'). Par défaut, 'n'.
+
+        Retourne:
+            None
+        """
         if isinstance(df, pd.DataFrame):
             self.nom_col = df.columns[colonne] if type(colonne) == int else colonne
             self.data = df[self.nom_col].dropna()
@@ -24,11 +101,49 @@ class Variable:
 
     # region DEFINITION
 
-    def definir(self, info_pop=None, info_var=None, type_var='', nom_complet='', nom_court='', legende=[],  unite_mesure='', taille_population='', est_population=False, unites_stat_complet='', unites_stat='', source='', lieu='', date=''):
+    def definir(
+        self,
+        info_pop: InfoPop | None = None,
+        info_var: InfoVar | None = None,
+        type_var: Literal['n', 'o', 'd', 'c' , ''] = '',
+        nom_complet: str = '',
+        nom_court: str = '',
+        legende: list[str] = [],
+        unite_mesure: str = '',
+        taille_population: int = None,
+        est_population = False,
+        unites_stat_complet: str = '',
+        unites_stat: str = '',
+        source: str = '',
+        lieu: str = '',
+        date: str = ''
+    ) -> Self:
+        """
+        Définit les attributs de la variable.
+        Si info_pop ou info_var est fourni, les attributs sont définis à partir de ces informations.
+        Sinon, ils sont définis à partir des arguments fournis.
+        Si aucun argument n'est fourni, les attributs sont définis à partir des valeurs par défaut.
+            - info_pop: Informations sur la population.
+                - taille_population: Taille de la population.
+                - est_population: Indique si la variable est une population.
+                - unites_stat_complet: Nom complet des unités statistiques.
+                - unites_stat: Nom abrégé des unités statistiques.
+                - source: Source des données.
+                - lieu: Lieu des données.
+                - date: Date des données.
+            - info_var: Informations sur la variable.
+                - type_var: Type de variable ('n', 'o', 'd', 'c').
+                - nom_complet: Nom complet de la variable.
+                - nom_court: Nom court de la variable.
+                - legende: Légende associée à la variable.
+                - unite_mesure: Unité de mesure de la variable.
+        Retourne:
+            Self: L'instance de la variable.
+        """
         if info_pop is not None:
             self.N, self.est_population, self.unites_stat_complet, self.unites_stat, self.source, self.lieu, self.date = info_pop.values()
         else:
-            self.N = taille_population if taille_population else (self.N if self.isinit else None)
+            self.N = taille_population if taille_population is not None else (self.N if self.isinit else None)
             self.est_population = est_population if est_population else (self.est_population if self.isinit else False)
             self.unites_stat_complet = unites_stat_complet if unites_stat_complet else (self.unites_stat_complet if self.isinit else 'unités statistiques')
             self.unites_stat = unites_stat if unites_stat else (self.unites_stat if self.isinit else 'unités stats')
@@ -55,12 +170,17 @@ class Variable:
         if type_var or (info_var is not None and info_var['type_var']) or not self.isinit:
             self._calculer_stats_desc()
             self.creation_classes()
+        if self.est_population:
+            self.N = self.n
         
         self.isinit = True
         return self
 
 
-    def infos(self):
+    def infos(self) -> tuple[InfoPop, InfoVar]:
+        """
+        Retourne les informations sur la population et la variable sous forme de dictionnaire.
+        """
         unites_stats = {
             'taille_population': self.N,
             'est_population': self.est_population,
@@ -84,7 +204,7 @@ class Variable:
 
     # region COPIES
 
-    def copy(self, sample=None):
+    def copy(self, sample: int | None = None) -> "Variable":
         data = self.data if sample is None else sample
         unites_stats, info_variable = self.infos()
         copie = Variable(data, self.nom_col).definir(info_pop=unites_stats, info_var=info_variable).creation_classes(bornes=self.bornes, decimales=self.decimales)
@@ -92,13 +212,13 @@ class Variable:
         return copie
 
 
-    def log(self):
+    def log(self) -> "Variable":
         data = np.log(self.data)
         unites_stats, info_variable = self.infos()
         return Variable(data).definir(info_pop=unites_stats, info_var=info_variable)
 
 
-    def echantillon(self, k):
+    def echantillon(self, k: int) -> "Variable":
         sample = self.data.sample(k)
         return self.copy(sample)
 
@@ -440,28 +560,33 @@ class Variable:
             liste.append('')
 
         num_rows = len(modalites)
+        unite_stats = copie.unites_stat
+        d_unite_stats = "d'" if unite_stats[0].lower() in 'aeiouy' else 'de '
+        nom = copie.nom_court
+        unite = f"\n({unite_mesure})" if unite_mesure else ''
+
         if copie.type_var != 'n':
             data = list(zip(['']*num_rows, modalites, ['']*num_rows, frequences, ['']*num_rows, pourcentages, ['']*num_rows, pourcentages_cumul, ['']*num_rows))
             columns = [
                 '',
-                f'{copie.nom_court}{f'\n({unite_mesure})' if unite_mesure else ''}',
+                f"{nom}{unite}",
                 '',
-                f'Nombre\n{"d'" if copie.unites_stat[0].lower() in 'aeiouy' else 'de '}{copie.unites_stat}',
+                f"Nombre\n{d_unite_stats}{unite_stats}",
                 '',
-                f'Pourcentage\n{"d'" if copie.unites_stat[0].lower() in 'aeiouy' else 'de '}{copie.unites_stat}',
+                f"Pourcentage\n{d_unite_stats}{unite_stats}",
                 '',
-                f'Pourcentage cumulé\n{"d'" if copie.unites_stat[0].lower() in 'aeiouy' else 'de '}{copie.unites_stat}',
+                f"Pourcentage cumulé\n{d_unite_stats}{unite_stats}",
                 ''
             ]
         else:
             data = list(zip(['']*num_rows, modalites, ['']*num_rows, frequences, ['']*num_rows, pourcentages, ['']*num_rows))
             columns = [
                 '',
-                f'{copie.nom_court}{f'\n({copie.unite_mesure})' if copie.unite_mesure else ''}',
+                f"{nom}{unite}",
                 '',
-                f'Nombre\n{"d'" if copie.unites_stat[0].lower() in 'aeiouy' else 'de '}{copie.unites_stat}',
+                f"Nombre\n{d_unite_stats}{unite_stats}",
                 '',
-                f'Pourcentage\n{"d'" if copie.unites_stat[0].lower() in 'aeiouy' else 'de '}{copie.unites_stat}',
+                f"Pourcentage\n{d_unite_stats}{unite_stats}",
                 ''
             ]
 
@@ -509,7 +634,7 @@ class Variable:
                 cell.set_height(0)
                 cell.set_linewidth(3)
 
-        title = f'Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}'
+        title = f"Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}"
         if len(title) > 82:
             line_break = 0
             for i in range(82,0,-1):
@@ -537,14 +662,14 @@ class Variable:
         title_cell.visible_edges = ''
         
         erreur_arrondis = "*Le total des pourcentages n'est pas 100,0% en raison des arrondis." if (pourcentages[-2] != '100,0%') else ""
-        footnote_text = f"{f"Source: {copie.source}" if copie.source else ''}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}"
+        source = f"Source: {copie.source}" if copie.source else ''
+        footnote_text = f"{source}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}"
     
         if footnote_text:
             footnote = table.add_cell(num_rows + 2, 1, width=table_width, height=header_height, text=footnote_text)
             footnote.set_linestyle('')
             footnote.set_text_props(fontsize='8', fontstyle='italic', ha='left', va='bottom', color='gray')
 
-        # return modalites, frequences, pourcentages, pourcentages_cumul
         return table
 
 
@@ -594,14 +719,16 @@ class Variable:
         plt.bar(x, y, width=largeur_barre, color='skyblue', edgecolor='black')
 
         # Customize the graph
-        plt.title(f'Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}')
+        plt.title(f"Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}")
         titre_unites = f" ({copie.unite_mesure})" if copie.unite_mesure else ''
         plt.xlabel(f"{copie.nom_court}{titre_unites}")
         plt.xticks(x_grad, x_etiquettes, rotation=rotation_x)
         if copie.est_continue:
             plt.xlim(x_grad[0], x_grad[-1])
+
         est_voyelle = copie.unites_stat[0] in 'aeiouy'
-        plt.ylabel(f'{"Pourcentage" if pourcentage else "Nombre"} {"d'" if est_voyelle else 'de '}{copie.unites_stat}')
+        d_unite_stats = "d'" if est_voyelle else 'de '
+        plt.ylabel(f"{'Pourcentage' if pourcentage else 'Nombre'} {d_unite_stats}{copie.unites_stat}")
         plt.grid(axis='y', linestyle='--', alpha=0.7)
 
         if etiquette_barres:
@@ -614,7 +741,9 @@ class Variable:
             erreur_arrondis = "Le total des pourcentages n'est pas 100,0% en raison des arrondis." if pourcentage and (somme != 100) else ""
             if copie.source or erreur_arrondis:
                 text_height = -0.05 if rotation_x == 0 else -0.1
-                plt.figtext(0.5, text_height, f"{f"Source: {copie.source}" if copie.source else ''}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}", ha='center', fontsize=8, fontstyle='italic', color='gray')
+                source = f"Source: {copie.source}" if copie.source else ''
+                footnote_text = f"{source}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}"
+                plt.figtext(0.5, text_height, footnote_text, ha='center', fontsize=8, fontstyle='italic', color='gray')
 
 
     def barres_verticales(self, pourcentage=True, rotation_x=0, etiquette_barres=False, decimales_pourcentages=1):
@@ -641,8 +770,10 @@ class Variable:
         plt.title(f'Répartition de {self.n} {self.unites_stat} selon {self.nom_complet}{', ' if self.lieu else ''}{self.lieu}{', ' if self.date else ''}{self.date}')
         plt.ylabel(f"{self.nom_court}")
         plt.yticks(x, x_etiquettes, rotation=rotation_x)
+
         est_voyelle = self.unites_stat[0] in 'aeiouy'
-        plt.xlabel(f'{"Pourcentage" if pourcentage else "Nombre"} {"d'" if est_voyelle else 'de '}{self.unites_stat}')
+        d_unite_stats = "d'" if est_voyelle else 'de '
+        plt.ylabel(f"{'Pourcentage' if pourcentage else 'Nombre'} {d_unite_stats}{self.unites_stat}")
         plt.grid(axis='x', linestyle='--', alpha=0.7)
 
         if etiquette_barres:
@@ -655,7 +786,9 @@ class Variable:
             erreur_arrondis = "Le total des pourcentages n'est pas 100,0% en raison des arrondis." if pourcentage and (somme != 100) else ""
             if self.source or erreur_arrondis:
                 text_height = -0.05 if rotation_x == 0 else -0.1
-                plt.figtext(0.5, text_height, f"{f"Source: {self.source}" if self.source else ''}{'\n' if self.source and erreur_arrondis else ''}{erreur_arrondis}", ha='center', fontsize=8, fontstyle='italic', color='gray')
+                source = f"Source: {self.source}" if self.source else ''
+                footnote_text = f"{source}{'\n' if self.source and erreur_arrondis else ''}{erreur_arrondis}"
+                plt.figtext(0.5, text_height, footnote_text, ha='center', fontsize=8, fontstyle='italic', color='gray')
 
     
     def diagramme_circulaire(self, decimales_pourcentages=1):
@@ -673,13 +806,15 @@ class Variable:
         plt.pie(y, labels=x_etiquettes, autopct=formattage)
 
         # Customize the chart
-        plt.title(f'Répartition de {self.n} {self.unites_stat} selon {self.nom_complet}{', ' if self.lieu else ''}{self.lieu}{', ' if self.date else ''}{self.date}')
+        plt.title(f"Répartition de {self.n} {self.unites_stat} selon {self.nom_complet}{', ' if self.lieu else ''}{self.lieu}{', ' if self.date else ''}{self.date}")
         plt.axis('equal')  # Equal aspect ratio ensures the pie is drawn as a circle
 
         # Add a note at the bottom of the plot
         erreur_arrondis = "Le total des pourcentages n'est pas 100,0% en raison des arrondis." if sum(np.round(y, decimals=decimales_pourcentages)) != 100 else ""
+        source = f"Source: {self.source}" if self.source else ''
+        footnote_text = f"{source}{'\n' if self.source and erreur_arrondis else ''}{erreur_arrondis}"
         if self.source or erreur_arrondis:
-            plt.figtext(0.5, 0.01, f"{f"Source: {self.source}" if self.source else ''}{'\n' if self.source and erreur_arrondis else ''}{erreur_arrondis}", ha='center', fontsize=8, fontstyle='italic', color='gray')
+            plt.figtext(0.5, 0.01, footnote_text, ha='center', fontsize=8, fontstyle='italic', color='gray')
 
         # Show the chart
         plt.show()
@@ -724,13 +859,15 @@ class Variable:
         plt.plot(x, y, marker='o', linestyle='-', color='blue')
 
         # Customize the graph
-        plt.title(f'Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}')
+        plt.title(f"Répartition de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}")
         titre_unites = f" ({copie.unite_mesure})" if copie.unite_mesure else ''
         plt.xlabel(f"{copie.nom_court}{titre_unites}")
         plt.xticks(x_grad, x_etiquettes, rotation=rotation_x)
         plt.xlim(x_grad[0] - amplitude / 3, x_grad[-1])
+
         est_voyelle = copie.unites_stat[0] in 'aeiouy'
-        plt.ylabel(f'{"Pourcentage" if pourcentage else "Nombre"} {"d'" if est_voyelle else 'de '}{copie.unites_stat}')
+        d_unite_stats = "d'" if est_voyelle else 'de '
+        plt.ylabel(f"{'Pourcentage' if pourcentage else 'Nombre'} {d_unite_stats}{copie.unites_stat}")
         plt.grid(axis='y', linestyle='--', alpha=0.7)
 
         if etiquette_barres:
@@ -755,7 +892,9 @@ class Variable:
             erreur_arrondis = "Le total des pourcentages n'est pas 100,0% en raison des arrondis." if pourcentage and (somme != 100) else ""
             if copie.source or erreur_arrondis:
                 text_height = -0.05 if rotation_x == 0 else -0.1
-                plt.figtext(0.5, text_height, f"{f"Source: {copie.source}" if copie.source else ''}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}", ha='center', fontsize=8, fontstyle='italic', color='gray')
+                source = f"Source: {copie.source}" if copie.source else ''
+                footnote_text = f"{source}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}"
+                plt.figtext(0.5, text_height, footnote_text, ha='center', fontsize=8, fontstyle='italic', color='gray')
     
 
     def ogive(self, valeur_depart=None, amplitude=None, valeur_fin=None, rotation_x=0, etiquette_barres=False, bornes=None, decimales=None, decimales_pourcentages=1):
@@ -790,13 +929,15 @@ class Variable:
         plt.plot(x, y, marker='o', linestyle='-', color='blue')
 
         # Customize the graph
-        plt.title(f'Répartition cumulée de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}')
+        plt.title(f"Répartition cumulée de {copie.n} {copie.unites_stat} selon {copie.nom_complet}{', ' if copie.lieu else ''}{copie.lieu}{', ' if copie.date else ''}{copie.date}")
         titre_unites = f" ({copie.unite_mesure})" if copie.unite_mesure else ''
         plt.xlabel(f"{copie.nom_court}{titre_unites}")
         plt.xticks(x, x_etiquettes, rotation=rotation_x)
         plt.xlim(x[0] - amplitude / 3, x[-1] + amplitude / 5)
+
         est_voyelle = copie.unites_stat[0] in 'aeiouy'
-        plt.ylabel(f'Pourcentage cumulé {"d'" if est_voyelle else 'de '}{copie.unites_stat}')
+        d_unite_stats = "d'" if est_voyelle else 'de '
+        plt.ylabel(f"Pourcentage {d_unite_stats}{copie.unites_stat}")
         plt.grid(axis='y', linestyle='--', alpha=0.7)
 
         if etiquette_barres:
@@ -807,7 +948,9 @@ class Variable:
             erreur_arrondis = "Le total des pourcentages n'est pas 100,0% en raison des arrondis." if (round(y[-1], decimales_pourcentages) != 100.0) else ""
             if copie.source or erreur_arrondis:
                 text_height = -0.05 if rotation_x == 0 else -0.1
-                plt.figtext(0.5, text_height, f"{f"Source: {copie.source}" if copie.source else ''}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}", ha='center', fontsize=8, fontstyle='italic', color='gray')
+                source = f"Source: {copie.source}" if copie.source else ''
+                footnote_text = f"{source}{'\n' if copie.source and erreur_arrondis else ''}{erreur_arrondis}"
+                plt.figtext(0.5, text_height, footnote_text, ha='center', fontsize=8, fontstyle='italic', color='gray')
 
     
     def visuel(self, valeur_depart=None, amplitude=None, valeur_fin=None, pourcentage=True, rotation_x=0, etiquette_barres=False, bornes=None, decimales=None, decimales_pourcentages=1):
